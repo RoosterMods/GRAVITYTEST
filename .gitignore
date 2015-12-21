@@ -1,0 +1,55 @@
+bool grav_target_locked = false;
+	if (GravityGun)
+	{
+		Entity EntityTarget;
+		DWORD equippedWeapon;
+		WEAPON::GET_CURRENT_PED_WEAPON(PLAYER::PLAYER_PED_ID(), &equippedWeapon, 1);
+		Player player = PLAYER::PLAYER_ID();
+		Ped playerPed = PLAYER::PLAYER_PED_ID();
+
+		Vector3 rot = CAM::GET_GAMEPLAY_CAM_ROT(0);
+		Vector3 dir = rot_to_direction(&rot);
+		Vector3 camPosition = CAM::GET_GAMEPLAY_CAM_COORD();
+		Vector3 playerPosition = ENTITY::GET_ENTITY_COORDS(PLAYER::PLAYER_PED_ID(), 1);
+		float spawnDistance = get_distance(&camPosition, &playerPosition);
+		spawnDistance += 5;
+		Vector3 spawnPosition = add(&camPosition, &multiply(&dir, spawnDistance));
+
+
+		Player tempPed = PLAYER::PLAYER_ID();
+		if (equippedWeapon == WEAPON_PISTOL)
+		{
+			if (grav_target_locked)
+			{
+				if (PLAYER::_GET_AIMED_ENTITY(PLAYER::PLAYER_ID(), &EntityTarget) && GetAsyncKeyState(VK_RBUTTON))
+				{
+					Vector3 EntityTargetPos = ENTITY::GET_ENTITY_COORDS(EntityTarget, 0);
+					PLAYER::DISABLE_PLAYER_FIRING(tempPed, true);
+					if (ENTITY::IS_ENTITY_A_PED(EntityTarget) && PED::IS_PED_IN_ANY_VEHICLE(EntityTarget, 1))
+					{
+						EntityTarget = PED::GET_VEHICLE_PED_IS_IN(EntityTarget, 0);
+					}
+
+					RequestControl(EntityTarget);
+
+					if (ENTITY::IS_ENTITY_A_VEHICLE(EntityTarget)) ENTITY::SET_ENTITY_HEADING(EntityTarget, ENTITY::GET_ENTITY_HEADING(tempPed));
+
+					ENTITY::SET_ENTITY_COORDS_NO_OFFSET(EntityTarget, spawnPosition.x, spawnPosition.y, spawnPosition.z, 0, 0, 0);
+
+					if (GetAsyncKeyState(VK_LBUTTON))
+					{
+						AUDIO::PLAY_SOUND_FROM_ENTITY(-1, "Foot_Swish", EntityTarget, "docks_heist_finale_2a_sounds", 0, 0);
+						ENTITY::SET_ENTITY_HEADING(EntityTarget, ENTITY::GET_ENTITY_HEADING(tempPed));
+						ENTITY::APPLY_FORCE_TO_ENTITY(EntityTarget, 1, dir.x * 10000.0f, dir.y * 10000.0f, dir.z * 10000.0f, 0.0f, 0.0f, 0.0f, 0, 0, 1, 1, 0, 1);
+						grav_target_locked = false;
+						PLAYER::DISABLE_PLAYER_FIRING(tempPed, false);
+					}
+				}
+			}
+			if (!PLAYER::_GET_AIMED_ENTITY(PLAYER::PLAYER_ID(), &EntityTarget))
+			{
+				grav_target_locked = true;
+				PLAYER::DISABLE_PLAYER_FIRING(tempPed, false);
+			}
+		}
+	}
